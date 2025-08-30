@@ -1,12 +1,45 @@
 <!doctype html>
 <html lang="zh-TW">
   <head>
+    <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Firebase 設定 -->
+<script>
+  console.log('🔥 正在載入Firebase...');
+  
+  // 🔥 替換為您從Firebase控制台取得的真實設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLYYekzfcYRqWGG2lT4aX5c3bjHNaHpCw",
+    authDomain: "spa-booking-system-6dab5.firebaseapp.com",
+    projectId: "spa-booking-system-6dab5",
+    storageBucket: "spa-booking-system-6dab5.firebasestorage.app",
+    messagingSenderId: "1002421028072",
+    appId: "1:1002421028072:web:46286fc976e4ddff58355d"
+  };
+
+  // 初始化Firebase
+  try {
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+    console.log('✅ Firebase連接成功');
+    
+    // 啟用離線支援
+    window.db.enablePersistence()
+      .then(() => console.log('📱 離線模式已啟用'))
+      .catch(err => console.warn('離線模式啟用失敗:', err));
+      
+  } catch (error) {
+    console.error('❌ Firebase初始化失敗:', error);
+  }
+</script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>紫薰精油SPA - doTERRA多特瑞專業芳療</title>
     <meta name="description" content="專業doTERRA多特瑞精油SPA，提供芳療按摩、熱石按摩、深層舒緩等服務" />
-    <script type="module" crossorigin src="./assets/index-9a959df9.js"></script>
-    <link rel="stylesheet" href="./assets/index-ea8b0d02.css">
+    <script type="module" crossorigin src="./assets/index-e46db867.js"></script>
+    <link rel="stylesheet" href="./assets/index-bd6a3887.css">
   </head>
   <body>
     <div id="root"></div>
