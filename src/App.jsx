@@ -1,8 +1,12 @@
 import React from 'react'
-import SpaBookingSystem from './components/SpaBookingSystem'
+import SpaBookingSystem from '../spa_booking_system';
 
 function App() {
-  return <SpaBookingSystem />
+  return (
+    <div>
+      <SpaBookingSystem />
+    </div>
+  );
 }
 
-export default App
+export default App;
