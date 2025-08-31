@@ -6,6 +6,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>紫薰精油SPA - doTERRA多特瑞專業芳療</title>
     <meta name="description" content="專業doTERRA多特瑞精油SPA，提供芳療按摩、熱石按摩、深層舒緩等服務" />
+  <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- Firebase 設定 -->
+<script>
+  console.log('🔥 Vite + Firebase 正在載入...');
+  
+  // 🔥 請替換為您從Firebase控制台取得的真實設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLYYekzfcYRqWGG2lT4aX5c3bjHNaHpCw",
+    authDomain: "spa-booking-system-6dab5.firebaseapp.com",
+    projectId: "spa-booking-system-6dab5", 
+    storageBucket: "spa-booking-system-6dab5.firebasestorage.app",
+    messagingSenderId: "1002421028072",
+    appId: "1:1002421028072:web:46286fc976e4ddff58355d"
+  };
+
+  // 初始化Firebase
+  try {
+    firebase.initializeApp(firebaseConfig);
+    window.db = firebase.firestore();
+    console.log('✅ Firebase + Vite 整合成功');
+    
+    // 啟用離線支援
+    window.db.enablePersistence()
+      .then(() => console.log('📱 離線模式已啟用'))
+      .catch(err => console.warn('離線模式啟用失敗:', err));
+      
+  } catch (error) {
+    console.error('❌ Firebase初始化失敗:', error);
+  }
+</script>
+
+<!-- Firebase連接測試 -->
+<script>
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      if (window.db) {
+        console.log('🧪 測試Firebase Firestore連接...');
+        
+        // 測試讀取服務項目
+        window.db.collection('services').limit(1).get()
+          .then(querySnapshot => {
+            if (querySnapshot.empty) {
+              console.log('⚠️ services集合為空，需要在Firebase控制台添加資料');
+              console.log('💡 或者執行初始化腳本');
+            } else {
+              console.log('✅ services集合連接成功');
+              querySnapshot.forEach(doc => {
+                console.log('📋 找到服務:', doc.data().name);
+              });
+            }
+          })
+          .catch(error => {
+            console.error('❌ Firestore連接失敗:', error);
+            console.log('🔍 請檢查Firebase設定和網路連接');
+          });
+      }
+    }, 2000);
+  });
+</script>
   </head>
   <body>
     <div id="root"></div>
