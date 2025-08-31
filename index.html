@@ -1,76 +1,373 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-TW">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>紫薰精油SPA - doTERRA多特瑞專業芳療</title>
-    <meta name="description" content="專業doTERRA多特瑞精油SPA，提供芳療按摩、熱石按摩、深層舒緩等服務" />
-  <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-<!-- Firebase 設定 -->
-<script>
-  console.log('🔥 Vite + Firebase 正在載入...');
-  
-  // 🔥 請替換為您從Firebase控制台取得的真實設定
-  const firebaseConfig = {
-    apiKey: "AIzaSyCy94WLe2Aii_XU6qhf650Vf2XoFNlJTts",
-    authDomain: "purple-spa-booking-56f2b.firebaseapp.com",
-    projectId: "purple-spa-booking-56f2b", 
-    storageBucket: "purple-spa-booking-56f2b.firebasestorage.app",
-    messagingSenderId: "759512191152",
-    appId: "1:759512191152:web:1fb5c01cb9a69f8ccaab75"
-  };
-
-  // 初始化Firebase
-  try {
-    firebase.initializeApp(firebaseConfig);
-    window.db = firebase.firestore();
-    console.log('✅ Firebase + Vite 整合成功');
-    
-    // 啟用離線支援
-    window.db.enablePersistence()
-      .then(() => console.log('📱 離線模式已啟用'))
-      .catch(err => console.warn('離線模式啟用失敗:', err));
-      
-  } catch (error) {
-    console.error('❌ Firebase初始化失敗:', error);
-  }
-</script>
-
-<!-- Firebase連接測試 -->
-<script>
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      if (window.db) {
-        console.log('🧪 測試Firebase Firestore連接...');
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPA預約表單 - Firebase整合</title>
+</head>
+<body>
+    <!-- 你的預約表單 HTML -->
+    <form id="bookingForm">
+        <div class="form-group">
+            <label for="customerName">客戶姓名:</label>
+            <input type="text" id="customerName" name="customerName" required>
+        </div>
         
-        // 測試讀取服務項目
-        window.db.collection('services').limit(1).get()
-          .then(querySnapshot => {
-            if (querySnapshot.empty) {
-              console.log('⚠️ services集合為空，需要在Firebase控制台添加資料');
-              console.log('💡 或者執行初始化腳本');
-            } else {
-              console.log('✅ services集合連接成功');
-              querySnapshot.forEach(doc => {
-                console.log('📋 找到服務:', doc.data().name);
-              });
+        <div class="form-group">
+            <label for="customerPhone">聯絡電話:</label>
+            <input type="tel" id="customerPhone" name="customerPhone" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="customerEmail">電子郵件:</label>
+            <input type="email" id="customerEmail" name="customerEmail">
+        </div>
+        
+        <div class="form-group">
+            <label for="service">服務項目:</label>
+            <select id="service" name="service" required>
+                <option value="">請選擇服務</option>
+                <option value="經典多特瑞芳療按摩">經典多特瑞芳療按摩 - $2800</option>
+                <option value="深層組織按摩">深層組織按摩 - $2200</option>
+                <option value="放鬆精油按摩">放鬆精油按摩 - $2500</option>
+                <option value="瑞典式按摩">瑞典式按摩 - $2000</option>
+                <option value="熱石按摩">熱石按摩 - $3200</option>
+                <option value="孕婦專用按摩">孕婦專用按摩 - $2400</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="therapist">選擇按摩師:</label>
+            <select id="therapist" name="therapist" required>
+                <option value="">請選擇按摩師</option>
+                <option value="林美玉">林美玉 - 資深芳療師</option>
+                <option value="陳雅文">陳雅文 - 深層按摩專家</option>
+                <option value="張慧娟">張慧娟 - 孕婦按摩專家</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="bookingDate">預約日期:</label>
+            <input type="date" id="bookingDate" name="bookingDate" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="bookingTime">預約時間:</label>
+            <select id="bookingTime" name="bookingTime" required>
+                <option value="">請選擇時間</option>
+                <option value="09:00">09:00 AM</option>
+                <option value="10:30">10:30 AM</option>
+                <option value="12:00">12:00 PM</option>
+                <option value="13:30">01:30 PM</option>
+                <option value="15:00">03:00 PM</option>
+                <option value="16:30">04:30 PM</option>
+                <option value="18:00">06:00 PM</option>
+                <option value="19:30">07:30 PM</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="specialRequests">特殊需求/備註:</label>
+            <textarea id="specialRequests" name="specialRequests" rows="4" placeholder="如有任何特殊需求請告知..."></textarea>
+        </div>
+        
+        <!-- 提交按鈕 -->
+        <button type="submit" id="submitBtn">
+            <span id="submitText">提交預約</span>
+            <span id="loadingText" style="display: none;">處理中...</span>
+        </button>
+    </form>
+    
+    <!-- 狀態訊息顯示區 -->
+    <div id="statusMessage" style="display: none;"></div>
+    
+    <!-- Firebase SDK 和整合代碼 -->
+    <script type="module">
+        // ==================== Firebase 配置 ====================
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // 🔥 請替換為你的 Firebase 配置
+        const firebaseConfig = {
+            apiKey: "your-api-key-here",
+            authDomain: "purple-spa-booking.firebaseapp.com",
+            projectId: "purple-spa-booking",
+            storageBucket: "purple-spa-booking.appspot.com",
+            messagingSenderId: "your-sender-id",
+            appId: "your-app-id"
+        };
+
+        // 初始化 Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        console.log("✅ Firebase 已連接成功！");
+
+        // ==================== 表單提交處理 ====================
+        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); // 防止表單預設提交
+            
+            // 顯示載入狀態
+            showLoading(true);
+            
+            try {
+                // 收集表單資料
+                const formData = collectFormData();
+                
+                // 驗證必填欄位
+                if (!validateFormData(formData)) {
+                    showMessage('請填寫所有必填欄位', 'error');
+                    showLoading(false);
+                    return;
+                }
+                
+                // 提交到 Firebase
+                const bookingId = await submitToFirebase(formData);
+                
+                // 顯示成功訊息
+                showSuccessMessage(bookingId);
+                
+                // 重置表單
+                document.getElementById('bookingForm').reset();
+                
+            } catch (error) {
+                console.error('預約提交錯誤:', error);
+                showMessage('預約失敗：' + error.message, 'error');
+            } finally {
+                showLoading(false);
             }
-          })
-          .catch(error => {
-            console.error('❌ Firestore連接失敗:', error);
-            console.log('🔍 請檢查Firebase設定和網路連接');
-          });
-      }
-    }, 2000);
-  });
-</script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+        });
+
+        // ==================== 輔助函數 ====================
+        
+        // 收集表單資料
+        function collectFormData() {
+            return {
+                customerName: document.getElementById('customerName').value.trim(),
+                customerPhone: document.getElementById('customerPhone').value.trim(),
+                customerEmail: document.getElementById('customerEmail').value.trim(),
+                service: document.getElementById('service').value,
+                therapist: document.getElementById('therapist').value,
+                bookingDate: document.getElementById('bookingDate').value,
+                bookingTime: document.getElementById('bookingTime').value,
+                specialRequests: document.getElementById('specialRequests').value.trim(),
+                status: '已預約',
+                paymentStatus: '待付款',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp()
+            };
+        }
+        
+        // 驗證表單資料
+        function validateFormData(data) {
+            const required = ['customerName', 'customerPhone', 'service', 'therapist', 'bookingDate', 'bookingTime'];
+            
+            for (let field of required) {
+                if (!data[field]) {
+                    console.log(`缺少必填欄位: ${field}`);
+                    return false;
+                }
+            }
+            
+            // 驗證日期不能是過去
+            const selectedDate = new Date(data.bookingDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < today) {
+                showMessage('預約日期不能是過去的日期', 'error');
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // 提交到 Firebase
+        async function submitToFirebase(formData) {
+            try {
+                const docRef = await addDoc(collection(db, 'bookings'), formData);
+                console.log("✅ 預約資料已儲存，文件ID:", docRef.id);
+                
+                // 同時儲存到客戶資料庫（可選）
+                await saveCustomerInfo(formData);
+                
+                return docRef.id;
+            } catch (error) {
+                throw new Error('資料庫儲存失敗: ' + error.message);
+            }
+        }
+        
+        // 儲存客戶資訊（可選功能）
+        async function saveCustomerInfo(formData) {
+            try {
+                const customerData = {
+                    name: formData.customerName,
+                    phone: formData.customerPhone,
+                    email: formData.customerEmail,
+                    lastVisit: serverTimestamp(),
+                    totalBookings: 1 // 實際應該查詢並累加
+                };
+                
+                // 這裡可以檢查客戶是否已存在，如果存在就更新，不存在就新增
+                await addDoc(collection(db, 'customers'), customerData);
+                console.log("✅ 客戶資訊已更新");
+            } catch (error) {
+                console.warn("客戶資訊儲存失敗（不影響預約）:", error);
+            }
+        }
+        
+        // 顯示成功訊息
+        function showSuccessMessage(bookingId) {
+            const message = `
+                🎉 預約成功！
+                預約編號：${bookingId}
+                
+                我們會盡快與您聯繫確認預約詳情。
+                感謝您選擇我們的服務！
+            `;
+            
+            showMessage(message, 'success');
+            
+            // 可選：自動跳轉到成功頁面
+            // setTimeout(() => {
+            //     window.location.href = '/booking-success.html?id=' + bookingId;
+            // }, 3000);
+        }
+        
+        // 顯示載入狀態
+        function showLoading(isLoading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const loadingText = document.getElementById('loadingText');
+            
+            if (isLoading) {
+                submitBtn.disabled = true;
+                submitText.style.display = 'none';
+                loadingText.style.display = 'inline';
+            } else {
+                submitBtn.disabled = false;
+                submitText.style.display = 'inline';
+                loadingText.style.display = 'none';
+            }
+        }
+        
+        // 顯示訊息
+        function showMessage(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.textContent = message;
+            statusDiv.className = `status-message ${type}`;
+            statusDiv.style.display = 'block';
+            
+            // 5秒後自動隱藏
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // ==================== 額外功能 ====================
+        
+        // 設定最小日期為今天
+        document.getElementById('bookingDate').min = new Date().toISOString().split('T')[0];
+        
+        // 根據選擇的服務自動計算價格（可選）
+        document.getElementById('service').addEventListener('change', function() {
+            const service = this.value;
+            const priceMap = {
+                '經典多特瑞芳療按摩': 2800,
+                '深層組織按摩': 2200,
+                '放鬆精油按摩': 2500,
+                '瑞典式按摩': 2000,
+                '熱石按摩': 3200,
+                '孕婦專用按摩': 2400
+            };
+            
+            if (priceMap[service]) {
+                console.log(`選擇服務: ${service}, 價格: $${priceMap[service]}`);
+                // 這裡可以顯示價格給用戶看
+            }
+        });
+
+        // 全域函數，供其他腳本使用
+        window.SpaBooking = {
+            // 查詢預約記錄
+            async getBookings() {
+                try {
+                    const querySnapshot = await getDocs(collection(db, 'bookings'));
+                    const bookings = [];
+                    querySnapshot.forEach((doc) => {
+                        bookings.push({ id: doc.id, ...doc.data() });
+                    });
+                    return bookings;
+                } catch (error) {
+                    console.error('查詢預約失敗:', error);
+                    throw error;
+                }
+            },
+            
+            // 手動提交預約（API）
+            async submitBooking(bookingData) {
+                return await submitToFirebase(bookingData);
+            }
+        };
+    </script>
+
+    <!-- CSS 樣式 -->
+    <style>
+        .status-message {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        
+        .status-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        #submitBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+    </style>
+</body>
 </html>
