@@ -1,600 +1,383 @@
+// src/App.jsx
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, User, Phone, Mail, MapPin, CheckCircle, Star, Leaf } from 'lucide-react';
+import BookingForm from './components/BookingForm';
+import './App.css';
 
-const SpaBookingSystem = () => {
-  const [currentStep, setCurrentStep] = useState('service');
-  const [bookingData, setBookingData] = useState({
-    service: '',
-    therapist: '',
-    date: '',
-    time: '',
-    duration: 0,
-    price: 0,
-    customer: {
-      name: '',
-      phone: '',
-      email: '',
-      notes: ''
-    }
-  });
+function App() {
+  const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+  const [currentPage, setCurrentPage] = useState('home');
+  const [firebaseStatus, setFirebaseStatus] = useState('connecting');
 
-  const [bookings, setBookings] = useState([]);
-
-  // 服務項目
-  const services = [
-    {
-      id: 'aromatherapy_60',
-      name: '經典多特瑞芳療按摩',
-      duration: 60,
-      price: 3200,
-      description: '使用doTERRA純天然精油，深度放鬆身心',
-      essential_oils: ['薰衣草', '檸檬', '薄荷']
-    },
-    {
-      id: 'hot_stone_90',
-      name: '多特瑞熱石精油按摩',
-      duration: 90,
-      price: 4200,
-      description: '結合溫熱火山石與多特瑞頂級精油',
-      essential_oils: ['乳香', '檀香', '天竺葵']
-    },
-    {
-      id: 'deep_tissue_75',
-      name: '多特瑞深層舒緩按摩',
-      duration: 75,
-      price: 3600,
-      description: '運動後肌肉舒緩，使用多特瑞專業複方',
-      essential_oils: ['冬青', '薄荷', '絲柏']
-    },
-    {
-      id: 'prenatal_60',
-      name: '多特瑞孕婦舒緩按摩',
-      duration: 60,
-      price: 3400,
-      description: '專為孕期媽媽調配的溫和精油護理',
-      essential_oils: ['薰衣草', '橙花', '羅馬洋甘菊']
-    },
-    {
-      id: 'facial_spa_90',
-      name: '多特瑞精油美顏護理',
-      duration: 90,
-      price: 4800,
-      description: '臉部深層清潔與多特瑞精油滋養',
-      essential_oils: ['乳香', '薰衣草', '茶樹']
-    },
-    {
-      id: 'couple_massage_120',
-      name: '多特瑞雙人芳療體驗',
-      duration: 120,
-      price: 7600,
-      description: '情侶專屬浪漫時光，享受多特瑞頂級精油',
-      essential_oils: ['依蘭', '佛手柑', '玫瑰']
-    }
-  ];
-
-  // 按摩師資訊
-  const therapists = [
-    {
-      id: 'therapist_1',
-      name: '林美惠',
-      specialties: ['芳療按摩', '熱石按摩'],
-      experience: '8年經驗',
-      rating: 4.9,
-      avatar: '👩‍⚕️'
-    },
-    {
-      id: 'therapist_2',
-      name: '陳雅婷',
-      specialties: ['深層按摩', '孕婦按摩'],
-      experience: '6年經驗',
-      rating: 4.8,
-      avatar: '👩‍⚕️'
-    },
-    {
-      id: 'therapist_3',
-      name: '王淑芬',
-      specialties: ['美顏護理', '雙人按摩'],
-      experience: '10年經驗',
-      rating: 5.0,
-      avatar: '👩‍⚕️'
-    }
-  ];
-
-  // 可預約時段
-  const timeSlots = [
-    '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', 
-    '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
-  ];
-
-  // 獲取未來7天日期
-  const getAvailableDates = () => {
-    const dates = [];
-    const today = new Date();
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      dates.push(date.toISOString().split('T')[0]);
-    }
-    return dates;
-  };
-
-  // 檢查時段是否可預約
-  const isTimeSlotAvailable = (date, time, therapist) => {
-    return !bookings.some(booking => 
-      booking.date === date && 
-      booking.time === time && 
-      booking.therapist === therapist
-    );
-  };
-
-  // 處理服務選擇
-  const handleServiceSelect = (service) => {
-    setBookingData(prev => ({
-      ...prev,
-      service: service.id,
-      duration: service.duration,
-      price: service.price
-    }));
-  };
-
-  // 處理預約提交
-  const handleBookingSubmit = () => {
-    const newBooking = {
-      id: Date.now(),
-      ...bookingData,
-      status: 'confirmed',
-      createdAt: new Date().toISOString()
-    };
-    
-    setBookings(prev => [...prev, newBooking]);
-    setCurrentStep('confirmation');
-  };
-
-  // 重新開始預約
-  const startNewBooking = () => {
-    setCurrentStep('service');
-    setBookingData({
-      service: '',
-      therapist: '',
-      date: '',
-      time: '',
-      duration: 0,
-      price: 0,
-      customer: {
-        name: '',
-        phone: '',
-        email: '',
-        notes: ''
+  useEffect(() => {
+    // 檢查 Firebase 連接狀態
+    const checkFirebaseConnection = async () => {
+      try {
+        if (window.db) {
+          // 測試 Firestore 連接
+          await window.db.collection('services').limit(1).get();
+          setFirebaseStatus('connected');
+          setIsFirebaseReady(true);
+          console.log('✅ Firebase 連接成功');
+        } else {
+          throw new Error('Firebase 未初始化');
+        }
+      } catch (error) {
+        console.error('❌ Firebase 連接失敗:', error);
+        setFirebaseStatus('error');
+        setIsFirebaseReady(false);
       }
-    });
-  };
+    };
 
-  // 渲染步驟指示器
-  const renderStepIndicator = () => {
-    const steps = [
-      { key: 'service', label: '選擇服務', icon: Leaf },
-      { key: 'therapist', label: '選擇按摩師', icon: User },
-      { key: 'datetime', label: '選擇時間', icon: Calendar },
-      { key: 'customer', label: '客戶資訊', icon: Phone },
-      { key: 'confirmation', label: '預約確認', icon: CheckCircle }
-    ];
-
-    return (
-      <div className="flex justify-center mb-8">
-        <div className="flex items-center space-x-4">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            const isActive = step.key === currentStep;
-            const isCompleted = steps.findIndex(s => s.key === currentStep) > index;
-            
-            return (
-              <div key={step.key} className="flex items-center">
-                <div className={`
-                  flex items-center justify-center w-10 h-10 rounded-full border-2
-                  ${isActive ? 'bg-purple-600 border-purple-600 text-white' : 
-                    isCompleted ? 'bg-purple-100 border-purple-600 text-purple-600' : 
-                    'bg-gray-100 border-gray-300 text-gray-400'}
-                `}>
-                  <Icon size={20} />
-                </div>
-                <span className={`ml-2 text-sm ${isActive ? 'text-purple-600 font-semibold' : 'text-gray-500'}`}>
-                  {step.label}
-                </span>
-                {index < steps.length - 1 && (
-                  <div className={`w-8 h-0.5 ml-4 ${isCompleted ? 'bg-purple-600' : 'bg-gray-300'}`} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  // 渲染服務選擇
-  const renderServiceSelection = () => (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">選擇您的療程服務</h2>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {services.map(service => (
-          <div key={service.id} className={`
-            border rounded-xl p-6 cursor-pointer transition-all duration-200 hover:shadow-lg
-            ${bookingData.service === service.id ? 'border-purple-500 bg-purple-50 shadow-md' : 'border-gray-200 hover:border-purple-300'}
-          `}
-          onClick={() => handleServiceSelect(service)}>
-            <div className="flex items-start justify-between mb-3">
-              <h3 className="font-semibold text-lg text-gray-800">{service.name}</h3>
-              <span className="text-purple-600 font-bold text-lg">NT${service.price}</span>
-            </div>
-            <p className="text-gray-600 text-sm mb-3">{service.description}</p>
-            <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-              <span className="flex items-center">
-                <Clock size={16} className="mr-1" />
-                {service.duration} 分鐘
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {service.essential_oils.map(oil => (
-                <span key={oil} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
-                  {oil}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-center mt-8">
-        <button 
-          onClick={() => setCurrentStep('therapist')}
-          disabled={!bookingData.service}
-          className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors"
-        >
-          下一步：選擇按摩師
-        </button>
-      </div>
-    </div>
-  );
-
-  // 渲染按摩師選擇
-  const renderTherapistSelection = () => (
-    <div className="max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">選擇您的專業按摩師</h2>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {therapists.map(therapist => (
-          <div key={therapist.id} className={`
-            border rounded-xl p-6 cursor-pointer transition-all duration-200 hover:shadow-lg
-            ${bookingData.therapist === therapist.id ? 'border-green-500 bg-green-50 shadow-md' : 'border-gray-200 hover:border-green-300'}
-          `}
-          onClick={() => setBookingData(prev => ({ ...prev, therapist: therapist.id }))}>
-            <div className="text-center">
-              <div className="text-4xl mb-3">{therapist.avatar}</div>
-              <h3 className="font-semibold text-lg text-gray-800 mb-2">{therapist.name}</h3>
-              <div className="flex items-center justify-center mb-2">
-                <Star className="text-yellow-400 fill-current" size={16} />
-                <span className="ml-1 text-sm text-gray-600">{therapist.rating}</span>
-              </div>
-              <p className="text-sm text-gray-500 mb-3">{therapist.experience}</p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                {therapist.specialties.map(specialty => (
-                  <span key={specialty} className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                    {specialty}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-center mt-8 space-x-4">
-        <button 
-          onClick={() => setCurrentStep('service')}
-          className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
-        >
-          上一步
-        </button>
-        <button 
-          onClick={() => setCurrentStep('datetime')}
-          disabled={!bookingData.therapist}
-          className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors"
-        >
-          下一步：選擇時間
-        </button>
-      </div>
-    </div>
-  );
-
-  // 渲染日期時間選擇
-  const renderDateTimeSelection = () => (
-    <div className="max-w-4xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">選擇預約日期與時間</h2>
-      
-      {/* 日期選擇 */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">選擇日期</h3>
-        <div className="grid grid-cols-7 gap-3">
-          {getAvailableDates().map(date => {
-            const dateObj = new Date(date);
-            const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
-            const isToday = date === new Date().toISOString().split('T')[0];
-            
-            return (
-              <div key={date} className={`
-                border rounded-lg p-3 cursor-pointer text-center transition-all duration-200
-                ${bookingData.date === date ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'}
-                ${isToday ? 'ring-2 ring-blue-200' : ''}
-              `}
-              onClick={() => setBookingData(prev => ({ ...prev, date, time: '' }))}>
-                <div className="text-sm text-gray-500">週{dayNames[dateObj.getDay()]}</div>
-                <div className="font-semibold">{dateObj.getDate()}</div>
-                <div className="text-xs text-gray-400">{dateObj.getMonth() + 1}月</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 時間選擇 */}
-      {bookingData.date && (
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4">選擇時間</h3>
-          <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-            {timeSlots.map(time => {
-              const isAvailable = isTimeSlotAvailable(bookingData.date, time, bookingData.therapist);
-              
-              return (
-                <button key={time} 
-                  onClick={() => setBookingData(prev => ({ ...prev, time }))}
-                  disabled={!isAvailable}
-                  className={`
-                    p-3 rounded-lg border font-semibold transition-all duration-200
-                    ${!isAvailable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
-                      bookingData.time === time ? 'border-purple-500 bg-purple-600 text-white' :
-                      'border-gray-200 hover:border-purple-300 hover:bg-purple-50'}
-                  `}
-                >
-                  {time}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-center space-x-4">
-        <button 
-          onClick={() => setCurrentStep('therapist')}
-          className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
-        >
-          上一步
-        </button>
-        <button 
-          onClick={() => setCurrentStep('customer')}
-          disabled={!bookingData.date || !bookingData.time}
-          className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors"
-        >
-          下一步：填寫資訊
-        </button>
-      </div>
-    </div>
-  );
-
-  // 渲染客戶資訊表單
-  const renderCustomerForm = () => (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">填寫客戶資訊</h2>
-      
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">姓名 *</label>
-          <input
-            type="text"
-            value={bookingData.customer.name}
-            onChange={(e) => setBookingData(prev => ({
-              ...prev,
-              customer: { ...prev.customer, name: e.target.value }
-            }))}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            placeholder="請輸入您的姓名"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">電話 *</label>
-          <input
-            type="tel"
-            value={bookingData.customer.phone}
-            onChange={(e) => setBookingData(prev => ({
-              ...prev,
-              customer: { ...prev.customer, phone: e.target.value }
-            }))}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            placeholder="請輸入您的手機號碼"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-          <input
-            type="email"
-            value={bookingData.customer.email}
-            onChange={(e) => setBookingData(prev => ({
-              ...prev,
-              customer: { ...prev.customer, email: e.target.value }
-            }))}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            placeholder="請輸入您的Email（選填）"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">特殊需求或備註</label>
-          <textarea
-            value={bookingData.customer.notes}
-            onChange={(e) => setBookingData(prev => ({
-              ...prev,
-              customer: { ...prev.customer, notes: e.target.value }
-            }))}
-            rows="4"
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            placeholder="如有特殊需求或想要告知我們的事項，請在此說明..."
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-center space-x-4 mt-8">
-        <button 
-          onClick={() => setCurrentStep('datetime')}
-          className="bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
-        >
-          上一步
-        </button>
-        <button 
-          onClick={handleBookingSubmit}
-          disabled={!bookingData.customer.name || !bookingData.customer.phone}
-          className="bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors"
-        >
-          確認預約
-        </button>
-      </div>
-    </div>
-  );
-
-  // 渲染預約確認
-  const renderConfirmation = () => {
-    const selectedService = services.find(s => s.id === bookingData.service);
-    const selectedTherapist = therapists.find(t => t.id === bookingData.therapist);
+    // 延遲檢查，確保 Firebase 已完全載入
+    const timer = setTimeout(checkFirebaseConnection, 2000);
     
-    return (
-      <div className="max-w-2xl mx-auto text-center">
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-8 mb-6">
-          <CheckCircle className="text-purple-600 mx-auto mb-4" size={64} />
-          <h2 className="text-3xl font-bold text-purple-800 mb-2">預約成功！</h2>
-          <p className="text-purple-700">您的預約已確認，我們期待為您提供最優質的多特瑞精油服務。</p>
-        </div>
+    return () => clearTimeout(timer);
+  }, []);
 
-        <div className="bg-white border border-gray-200 rounded-xl p-6 text-left">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">預約詳細資訊</h3>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-600">服務項目：</span>
-              <span className="font-semibold">{selectedService?.name}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-600">按摩師：</span>
-              <span className="font-semibold">{selectedTherapist?.name}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-600">預約日期：</span>
-              <span className="font-semibold">{new Date(bookingData.date).toLocaleDateString('zh-TW')}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-600">預約時間：</span>
-              <span className="font-semibold">{bookingData.time}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-600">療程時長：</span>
-              <span className="font-semibold">{bookingData.duration} 分鐘</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-600">客戶姓名：</span>
-              <span className="font-semibold">{bookingData.customer.name}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-gray-100">
-              <span className="text-gray-600">聯絡電話：</span>
-              <span className="font-semibold">{bookingData.customer.phone}</span>
-            </div>
-            <div className="flex justify-between py-3 text-lg">
-              <span className="text-gray-800 font-semibold">總費用：</span>
-              <span className="text-purple-600 font-bold">NT$ {bookingData.price.toLocaleString()}</span>
-            </div>
+  // 初始化服務資料
+  const initializeServices = async () => {
+    if (!window.db) return;
+
+    try {
+      const servicesData = [
+        {
+          name: '經典多特瑞芳療按摩',
+          description: '使用純天然多特瑞精油，深層放鬆身心',
+          duration: 90,
+          price: 2800,
+          isActive: true,
+          category: 'aromatherapy'
+        },
+        {
+          name: '深層組織按摩',
+          description: '針對深層肌肉緊張，有效舒緩疼痛',
+          duration: 60,
+          price: 2200,
+          isActive: true,
+          category: 'therapeutic'
+        },
+        {
+          name: '放鬆精油按摩',
+          description: '溫和精油按摩，適合日常放鬆',
+          duration: 75,
+          price: 2500,
+          isActive: true,
+          category: 'relaxation'
+        },
+        {
+          name: '熱石按摩',
+          description: '結合溫熱石療，深度放鬆肌肉',
+          duration: 90,
+          price: 3200,
+          isActive: true,
+          category: 'specialty'
+        },
+        {
+          name: '孕婦專用按摩',
+          description: '專為孕媽咪設計的安全按摩療程',
+          duration: 60,
+          price: 2400,
+          isActive: true,
+          category: 'prenatal'
+        },
+        {
+          name: '瑞典式按摩',
+          description: '經典瑞典式手法，促進血液循環',
+          duration: 60,
+          price: 2000,
+          isActive: true,
+          category: 'classic'
+        }
+      ];
+
+      // 檢查服務是否已存在
+      const servicesSnapshot = await window.db.collection('services').get();
+      
+      if (servicesSnapshot.empty) {
+        console.log('🚀 初始化服務資料...');
+        
+        for (const service of servicesData) {
+          await window.db.collection('services').add({
+            ...service,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        
+        console.log('✅ 服務資料初始化完成');
+      } else {
+        console.log('📋 服務資料已存在，跳過初始化');
+      }
+
+      // 初始化按摩師資料
+      const therapistsData = [
+        {
+          name: '林美玉',
+          specialty: '資深芳療師',
+          experience: 8,
+          isAvailable: true,
+          workingHours: {
+            monday: ['09:00', '20:00'],
+            tuesday: ['09:00', '20:00'],
+            wednesday: ['09:00', '20:00'],
+            thursday: ['09:00', '20:00'],
+            friday: ['09:00', '20:00'],
+            saturday: ['10:00', '18:00'],
+            sunday: ['10:00', '18:00']
+          }
+        },
+        {
+          name: '陳雅文',
+          specialty: '深層按摩專家',
+          experience: 6,
+          isAvailable: true,
+          workingHours: {
+            monday: ['09:00', '20:00'],
+            tuesday: ['09:00', '20:00'],
+            wednesday: ['09:00', '20:00'],
+            thursday: ['09:00', '20:00'],
+            friday: ['09:00', '20:00'],
+            saturday: ['10:00', '18:00'],
+            sunday: ['10:00', '18:00']
+          }
+        },
+        {
+          name: '張慧娟',
+          specialty: '孕婦按摩專家',
+          experience: 5,
+          isAvailable: true,
+          workingHours: {
+            monday: ['09:00', '20:00'],
+            tuesday: ['09:00', '20:00'],
+            wednesday: ['09:00', '20:00'],
+            thursday: ['09:00', '20:00'],
+            friday: ['09:00', '20:00'],
+            saturday: ['10:00', '18:00'],
+            sunday: ['10:00', '18:00']
+          }
+        }
+      ];
+
+      const therapistsSnapshot = await window.db.collection('therapists').get();
+      
+      if (therapistsSnapshot.empty) {
+        console.log('🚀 初始化按摩師資料...');
+        
+        for (const therapist of therapistsData) {
+          await window.db.collection('therapists').add({
+            ...therapist,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }
+        
+        console.log('✅ 按摩師資料初始化完成');
+      } else {
+        console.log('👥 按摩師資料已存在，跳過初始化');
+      }
+
+    } catch (error) {
+      console.error('❌ 資料初始化失敗:', error);
+    }
+  };
+
+  // 當 Firebase 連接成功時初始化資料
+  useEffect(() => {
+    if (isFirebaseReady) {
+      initializeServices();
+    }
+  }, [isFirebaseReady]);
+
+  const renderFirebaseStatus = () => {
+    switch (firebaseStatus) {
+      case 'connecting':
+        return (
+          <div className="firebase-status connecting">
+            <div className="spinner"></div>
+            <span>連接 Firebase 中...</span>
           </div>
-        </div>
-
-        <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-blue-800 text-sm">
-            📱 我們將在預約時間前1小時以簡訊提醒您<br/>
-            📍 地址：台中市西屯區文心路二段201號<br/>
-            📞 如需更改或取消預約，請提前24小時來電：04-2345-6789
-          </p>
-        </div>
-
-        <button 
-          onClick={startNewBooking}
-          className="mt-6 bg-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
-        >
-          再次預約
-        </button>
-      </div>
-    );
+        );
+      case 'error':
+        return (
+          <div className="firebase-status error">
+            <span>❌ Firebase 連接失敗，請重新整理頁面</span>
+          </div>
+        );
+      case 'connected':
+        return (
+          <div className="firebase-status success">
+            <span>✅ Firebase 連接成功</span>
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-lavender-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Leaf className="text-purple-600 mr-3" size={32} />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">紫薰精油SPA</h1>
-                <p className="text-sm text-gray-600">doTERRA多特瑞精油 • 專業芳療按摩</p>
-              </div>
-            </div>
-            <div className="flex items-center text-sm text-gray-600">
-              <MapPin size={16} className="mr-1" />
-              <span>台中市西屯區</span>
-            </div>
+    <div className="app">
+      {/* 頁首 */}
+      <header className="app-header">
+        <div className="container">
+          <div className="logo">
+            <h1>🌸 紫薰精油 SPA</h1>
+            <p>doTERRA 多特瑞專業芳療</p>
           </div>
+          
+          <nav className="main-nav">
+            <button 
+              className={`nav-btn ${currentPage === 'home' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('home')}
+            >
+              首頁
+            </button>
+            <button 
+              className={`nav-btn ${currentPage === 'booking' ? 'active' : ''}`}
+              onClick={() => setCurrentPage('booking')}
+            >
+              立即預約
+            </button>
+          </nav>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {currentStep !== 'confirmation' && renderStepIndicator()}
-        
-        {currentStep === 'service' && renderServiceSelection()}
-        {currentStep === 'therapist' && renderTherapistSelection()}
-        {currentStep === 'datetime' && renderDateTimeSelection()}
-        {currentStep === 'customer' && renderCustomerForm()}
-        {currentStep === 'confirmation' && renderConfirmation()}
+      {/* Firebase 狀態顯示 */}
+      {renderFirebaseStatus()}
+
+      {/* 主要內容 */}
+      <main className="main-content">
+        {currentPage === 'home' && (
+          <div className="home-page">
+            {/* Hero Section */}
+            <section className="hero">
+              <div className="container">
+                <div className="hero-content">
+                  <h2>專業精油 SPA 體驗</h2>
+                  <p>使用頂級 doTERRA 多特瑞精油，為您帶來身心靈的完美放鬆</p>
+                  <button 
+                    className="cta-button"
+                    onClick={() => setCurrentPage('booking')}
+                  >
+                    🌸 立即預約
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* 服務項目 */}
+            <section className="services">
+              <div className="container">
+                <h2>我們的服務</h2>
+                <div className="services-grid">
+                  <div className="service-item">
+                    <div className="service-icon">🌿</div>
+                    <h3>經典多特瑞芳療按摩</h3>
+                    <p>90分鐘 | NT$ 2,800</p>
+                    <span>使用純天然多特瑞精油</span>
+                  </div>
+                  <div className="service-item">
+                    <div className="service-icon">💪</div>
+                    <h3>深層組織按摩</h3>
+                    <p>60分鐘 | NT$ 2,200</p>
+                    <span>舒緩深層肌肉緊張</span>
+                  </div>
+                  <div className="service-item">
+                    <div className="service-icon">🌸</div>
+                    <h3>放鬆精油按摩</h3>
+                    <p>75分鐘 | NT$ 2,500</p>
+                    <span>溫和放鬆療程</span>
+                  </div>
+                  <div className="service-item">
+                    <div className="service-icon">🔥</div>
+                    <h3>熱石按摩</h3>
+                    <p>90分鐘 | NT$ 3,200</p>
+                    <span>溫熱石療深度放鬆</span>
+                  </div>
+                  <div className="service-item">
+                    <div className="service-icon">🤱</div>
+                    <h3>孕婦專用按摩</h3>
+                    <p>60分鐘 | NT$ 2,400</p>
+                    <span>孕媽咪安全療程</span>
+                  </div>
+                  <div className="service-item">
+                    <div className="service-icon">❄️</div>
+                    <h3>瑞典式按摩</h3>
+                    <p>60分鐘 | NT$ 2,000</p>
+                    <span>經典瑞典式手法</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 專業團隊 */}
+            <section className="team">
+              <div className="container">
+                <h2>專業按摩師團隊</h2>
+                <div className="team-grid">
+                  <div className="team-member">
+                    <div className="member-avatar">👩‍⚕️</div>
+                    <h3>林美玉</h3>
+                    <p>資深芳療師</p>
+                    <span>8年經驗</span>
+                  </div>
+                  <div className="team-member">
+                    <div className="member-avatar">👩‍⚕️</div>
+                    <h3>陳雅文</h3>
+                    <p>深層按摩專家</p>
+                    <span>6年經驗</span>
+                  </div>
+                  <div className="team-member">
+                    <div className="member-avatar">👩‍⚕️</div>
+                    <h3>張慧娟</h3>
+                    <p>孕婦按摩專家</p>
+                    <span>5年經驗</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {currentPage === 'booking' && (
+          <div className="booking-page">
+            <div className="container">
+              <h2>線上預約服務</h2>
+              {isFirebaseReady ? (
+                <BookingForm />
+              ) : (
+                <div className="loading-message">
+                  <div className="spinner"></div>
+                  <p>正在載入預約系統...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white mt-16">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="font-semibold mb-4">聯絡資訊</h3>
-              <div className="space-y-2 text-sm">
-                <p className="flex items-center"><Phone size={16} className="mr-2" /> 04-2345-6789</p>
-                <p className="flex items-center"><Mail size={16} className="mr-2" /> info@greenspa.com</p>
-                <p className="flex items-center"><MapPin size={16} className="mr-2" /> 台中市西屯區文心路二段201號</p>
-              </div>
+      {/* 頁尾 */}
+      <footer className="app-footer">
+        <div className="container">
+          <div className="footer-content">
+            <div className="footer-section">
+              <h3>🌸 紫薰精油 SPA</h3>
+              <p>專業 doTERRA 精油按摩服務</p>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">營業時間</h3>
-              <div className="text-sm space-y-1">
-                <p>週一至週日：09:00 - 21:00</p>
-                <p>國定假日正常營業</p>
-              </div>
+            <div className="footer-section">
+              <h4>聯絡資訊</h4>
+              <p>📞 02-1234-5678</p>
+              <p>📧 info@purplespa.com</p>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">注意事項</h3>
-              <div className="text-sm space-y-1">
-                <p>• 請提前10分鐘到達</p>
-                <p>• 取消預約請提前24小時</p>
-                <p>• 孕婦請告知懷孕週數</p>
-              </div>
+            <div className="footer-section">
+              <h4>營業時間</h4>
+              <p>週一至週日 09:00 - 21:00</p>
             </div>
+          </div>
+          <div className="footer-bottom">
+            <p>&copy; 2025 紫薰精油 SPA. All rights reserved.</p>
           </div>
         </div>
       </footer>
     </div>
   );
-};
+}
 
-export default SpaBookingSystem;
+export default App;
